@@ -193,17 +193,34 @@ async def process_recognition(update: Update, media_file) -> None:
 
 async def media_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
+
+    mime = getattr(message.document, "mime_type", "") or ""
+    filename = (
+        (message.document.file_name or "").lower()
+        if message.document else ""
+    )
+
+    is_video = (
+        message.video is not None
+        or message.animation is not None
+        or mime.startswith("video/")
+        or filename.endswith((".mp4", ".mov", ".webm", ".m4v", ".gif"))
+    )
+
+    if message.chat.type in ("group", "supergroup") and is_video:
+        return
+
     media = message.video or message.audio or message.voice or message.document
+
     if not media:
         return
-    mime = getattr(media, "mime_type", "") or ""
+
     if message.document and not (
-        mime.startswith("audio/") or mime.startswith("video/")
-        or (message.document.file_name or "").lower().endswith(
-            (".mp3", ".wav", ".m4a", ".ogg", ".mp4", ".mov", ".webm")
-        )
+        mime.startswith("audio/")
+        or filename.endswith((".mp3", ".wav", ".m4a", ".ogg"))
     ):
         return
+
     await process_recognition(update, media)
 
 async def download_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str):
